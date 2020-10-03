@@ -1,24 +1,62 @@
+package utils;
+
 import java.sql.*;
 import java.util.Random;
-import org.postgresql.ds.PGConnectionPoolDataSource;
+
+import org.postgresql.ds.PGSimpleDataSource;
 
 public class DBConnection {
 
     private static final int MAX_RETRY_COUNT = 3;
     private static final String RETRY_SQL_STATE = "40001";
-
-    private final PGConnectionPoolDataSource ds;
-
+    private static final PGSimpleDataSource ds = new PGSimpleDataSource();
     private final Random rand = new Random();
 
-    DBConnection(String[] serverNames) {
-        ds = new PGConnectionPoolDataSource();
+    private static final DBConnection instance = new DBConnection();
+    private DBConnection() {};
+
+    public void init(String[] serverNames) {
         ds.setServerNames(serverNames);
         ds.setUser("root");
         ds.setPassword(null);
         ds.setDatabaseName("wholesale");
         ds.setApplicationName("Wholesale");
     }
+
+    public static DBConnection getInstance() {
+        return instance;
+    }
+
+    public Connection getConnection() {
+        try {
+            Connection c = ds.getConnection();
+            return c;
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            return null;
+        }
+    }
+
+    public boolean commitTransaction(Connection c) {
+        try {
+            c.commit();
+            return true;
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean rollbackTransaction(Connection c) {
+        try {
+            c.rollback();
+            return true;
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            return false;
+        }
+    }
+
 
     /**
      * Run SQL code in a way that automatically handles the
@@ -33,7 +71,7 @@ public class DBConnection {
      * placeholders.
      * @return Integer Number of rows updated, or -1 if an error is thrown.
      */
-    public Integer runSQL(String sqlCode, String... args) {
+    public Integer runSQL(Connection connection, String sqlCode, String... args) {
 
         // This block is only used to emit class and method names in
         // the program output.  It is not necessary in production
@@ -45,12 +83,11 @@ public class DBConnection {
 
         int rv = 0;
 
-        try (Connection connection = ds.getConnection()) {
+        try {
 
             // We're managing the commit lifecycle ourselves so we can
             // automatically issue transaction retries.
             connection.setAutoCommit(false);
-
             int retryCount = 0;
 
             while (retryCount <= MAX_RETRY_COUNT) {
@@ -118,7 +155,6 @@ public class DBConnection {
                         System.out.printf("\n%s.%s:\n    '%s'\n", callerClass, callerMethod, pstmt);
                     }
 
-                    connection.commit();
                     break;
 
                 } catch (SQLException e) {
@@ -156,5 +192,14 @@ public class DBConnection {
         }
 
         return rv;
+    }
+
+    public ResultSet executeQuery(Connection conn, String sql) {
+        try {
+            return conn.createStatement().executeQuery(sql);
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            return null;
+        }
     }
 }
