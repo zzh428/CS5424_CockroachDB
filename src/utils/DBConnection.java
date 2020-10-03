@@ -107,7 +107,6 @@ public class DBConnection {
                             pstmt.setString(place, arg);
                         }
                     }
-
                     if (pstmt.execute()) {
                         // We know that `pstmt.getResultSet()` will
                         // not return `null` if `pstmt.execute()` was
@@ -186,12 +185,72 @@ public class DBConnection {
         return rv;
     }
 
-    public static ResultSet executeQuery(Connection conn, String sql) {
+    public static ResultSet executeQuery(Connection connection, String sqlCode, String... args) {
         try {
-            return conn.createStatement().executeQuery(sql);
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-            return null;
+
+            // We're managing the commit lifecycle ourselves so we can
+            // automatically issue transaction retries.
+            connection.setAutoCommit(false);
+            int retryCount = 0;
+
+            while (retryCount <= MAX_RETRY_COUNT) {
+
+                if (retryCount == MAX_RETRY_COUNT) {
+                    String err = String.format("hit max of %s retries, aborting", MAX_RETRY_COUNT);
+                    throw new RuntimeException(err);
+                }
+
+                try (PreparedStatement pstmt = connection.prepareStatement(sqlCode)) {
+
+                    // Loop over the args and insert them into the
+                    // prepared statement based on their types.  In
+                    // this simple example we classify the argument
+                    // types as "integers" and "everything else"
+                    // (a.k.a. strings).
+                    for (int i=0; i<args.length; i++) {
+                        int place = i + 1;
+                        String arg = args[i];
+
+                        try {
+                            int val = Integer.parseInt(arg);
+                            pstmt.setInt(place, val);
+                        } catch (NumberFormatException e) {
+                            pstmt.setString(place, arg);
+                        }
+                    }
+                    pstmt.execute();
+                    return pstmt.getResultSet();
+
+                } catch (SQLException e) {
+
+                    if (RETRY_SQL_STATE.equals(e.getSQLState())) {
+                        // Since this is a transaction retry error, we
+                        // roll back the transaction and sleep a
+                        // little before trying again.  Each time
+                        // through the loop we sleep for a little
+                        // longer than the last time
+                        // (A.K.A. exponential backoff).
+                        System.out.printf("retryable exception occurred:\n    sql state = [%s]\n    message = [%s]\n    retry counter = %s\n", e.getSQLState(), e.getMessage(), retryCount);
+                        connection.rollback();
+                        retryCount++;
+                        int sleepMillis = (int)(Math.pow(2, retryCount) * 100) + rand.nextInt(100);
+                        System.out.printf("Hit 40001 transaction retry error, sleeping %s milliseconds\n", sleepMillis);
+                        try {
+                            Thread.sleep(sleepMillis);
+                        } catch (InterruptedException ignored) {
+                            // Necessary to allow the Thread.sleep()
+                            // above so the retry loop can continue.
+                        }
+                    } else {
+                        throw e;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.out.printf("BasicExampleDAO.runSQL ERROR: { state => %s, cause => %s, message => %s }\n",
+                    e.getSQLState(), e.getCause(), e.getMessage());
         }
+        return null;
     }
+
 }
