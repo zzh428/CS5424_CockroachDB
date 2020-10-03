@@ -6,16 +6,12 @@ import java.util.Random;
 import org.postgresql.ds.PGSimpleDataSource;
 
 public class DBConnection {
-
     private static final int MAX_RETRY_COUNT = 3;
     private static final String RETRY_SQL_STATE = "40001";
     private static final PGSimpleDataSource ds = new PGSimpleDataSource();
-    private final Random rand = new Random();
+    private static final Random rand = new Random();
 
-    private static final DBConnection instance = new DBConnection();
-    private DBConnection() {};
-
-    public void init(String[] serverNames) {
+    public static void init(String[] serverNames) {
         ds.setServerNames(serverNames);
         ds.setUser("root");
         ds.setPassword(null);
@@ -23,11 +19,7 @@ public class DBConnection {
         ds.setApplicationName("Wholesale");
     }
 
-    public static DBConnection getInstance() {
-        return instance;
-    }
-
-    public Connection getConnection() {
+    public static Connection getConnection() {
         try {
             Connection c = ds.getConnection();
             return c;
@@ -37,7 +29,7 @@ public class DBConnection {
         }
     }
 
-    public boolean commitTransaction(Connection c) {
+    public static boolean commitTransaction(Connection c) {
         try {
             c.commit();
             return true;
@@ -47,7 +39,7 @@ public class DBConnection {
         }
     }
 
-    public boolean rollbackTransaction(Connection c) {
+    public static boolean rollbackTransaction(Connection c) {
         try {
             c.rollback();
             return true;
@@ -71,7 +63,7 @@ public class DBConnection {
      * placeholders.
      * @return Integer Number of rows updated, or -1 if an error is thrown.
      */
-    public Integer runSQL(Connection connection, String sqlCode, String... args) {
+    public static Integer runSQL(Connection connection, String sqlCode, String... args) {
 
         // This block is only used to emit class and method names in
         // the program output.  It is not necessary in production
@@ -194,7 +186,7 @@ public class DBConnection {
         return rv;
     }
 
-    public ResultSet executeQuery(Connection conn, String sql) {
+    public static ResultSet executeQuery(Connection conn, String sql) {
         try {
             return conn.createStatement().executeQuery(sql);
         } catch (SQLException throwables) {
