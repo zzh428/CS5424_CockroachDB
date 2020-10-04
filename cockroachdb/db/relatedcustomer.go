@@ -9,6 +9,11 @@ import (
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
 
+type relatedCustomer struct {
+	warehouseID, districtID int
+	orderSet                map[int]struct{}
+}
+
 func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) {
 	fmt.Fprintln(os.Stdout, "[Related-Customer output]")
 	customers := make(map[int]struct{})
@@ -47,11 +52,7 @@ func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) 
 			}
 			rows.Close()
 		}
-		type customerDetail struct {
-			warehouseID, districtID int
-			orderSet                map[int]struct{}
-		}
-		otherCustomerOrders := make(map[int]*customerDetail)
+		otherCustomerOrders := make(map[int]*relatedCustomer)
 		rows, err = tx.Query(
 			"SELECT c_w_id, c_d_id, c_id FROM customer WHERE c_w_id != $1",
 			warehouseID,
@@ -63,7 +64,7 @@ func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) 
 		for rows.Next() {
 			var (
 				cID int
-				c   customerDetail
+				c   relatedCustomer
 			)
 			if err := rows.Scan(&c.warehouseID, &c.districtID, &cID); err != nil {
 				return err
@@ -129,9 +130,9 @@ func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) 
 		return
 	}
 	// Output
-	fmt.Fprintln(os.Stdout, "WarehouseID", warehouseID, "DistrictID", districtID, "CustomerID", customerID)
+	fmt.Fprintln(os.Stdout, warehouseID, districtID, customerID)
 	for c := range customers {
-		fmt.Fprintln(os.Stdout, "Related CustomerID", c)
+		fmt.Fprintln(os.Stdout, c)
 	}
 	fmt.Fprintln(os.Stdout, "[Related-Customer done]")
 }
