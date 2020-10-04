@@ -1,6 +1,8 @@
 package utils
 
-import "strconv"
+import (
+	"strconv"
+)
 
 func StringsToInts(strs []string) ([]int, error) {
 	nums := make([]int, len(strs), len(strs))
