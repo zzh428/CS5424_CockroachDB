@@ -11,9 +11,10 @@ public class DBConnection {
 
     private final Random rand = new Random();
 
-    DBConnection(String[] serverNames) {
+    DBConnection(String[] serverNames, int[] portNumbers) {
         ds = new PGConnectionPoolDataSource();
         ds.setServerNames(serverNames);
+        ds.setPortNumbers(portNumbers);
         ds.setUser("root");
         ds.setPassword(null);
         ds.setDatabaseName("wholesale");
