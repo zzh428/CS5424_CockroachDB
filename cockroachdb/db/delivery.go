@@ -4,15 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
 
-func (d *Driver) RunDeliveryTxn(warehouseID, carrierID int) {
-	fmt.Fprintln(os.Stdout, "[Delivery output]")
+func (d *Driver) RunDeliveryTxn(warehouseID, carrierID int) time.Duration {
+	fmt.Fprintln(d.out, "[Delivery output]")
 	// Transaction
+	start := time.Now()
 	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
 		// District 1 to 10
 		for districtID := 1; districtID <= 10; districtID++ {
@@ -62,9 +62,11 @@ func (d *Driver) RunDeliveryTxn(warehouseID, carrierID int) {
 		}
 		return nil
 	}); err != nil {
-		fmt.Fprintln(os.Stderr, "run delivery txn failed:", err)
-		return
+		fmt.Fprintln(d.errOut, "run delivery txn failed:", err)
+		return 0
 	}
+	duration := time.Since(start)
 	// Output
-	fmt.Fprintln(os.Stdout, "[Delivery done]")
+	fmt.Fprintln(d.out, "[Delivery done]")
+	return duration
 }

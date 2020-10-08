@@ -4,15 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
+	"time"
 
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
 
-func (d *Driver) RunStockLevelTxn(warehouseID, districtID, threshold, lastOrderNum int) {
-	fmt.Fprintln(os.Stdout, "[Stock-Level output]")
+func (d *Driver) RunStockLevelTxn(warehouseID, districtID, threshold, lastOrderNum int) time.Duration {
+	fmt.Fprintln(d.out, "[Stock-Level output]")
 	total := 0
 	// Transaction
+	start := time.Now()
 	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
 		// Get next order id
 		var n int
@@ -54,10 +55,12 @@ func (d *Driver) RunStockLevelTxn(warehouseID, districtID, threshold, lastOrderN
 		}
 		return nil
 	}); err != nil {
-		fmt.Fprintln(os.Stderr, "run stock level txn failed:", err)
-		return
+		fmt.Fprintln(d.errOut, "run stock level txn failed:", err)
+		return 0
 	}
+	duration := time.Since(start)
 	// Output
-	fmt.Fprintln(os.Stdout, total)
-	fmt.Fprintln(os.Stdout, "[Stock-Level done]")
+	fmt.Fprintln(d.out, total)
+	fmt.Fprintln(d.out, "[Stock-Level done]")
+	return duration
 }

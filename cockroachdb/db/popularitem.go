@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
+	"time"
 
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
@@ -24,11 +24,12 @@ type popularItemDetail struct {
 	orderSet map[int]struct{}
 }
 
-func (d *Driver) RunPopularItemTxn(warehouseID, districtID, lastOrderNum int) {
-	fmt.Fprintln(os.Stdout, "[Popular-Item output]")
+func (d *Driver) RunPopularItemTxn(warehouseID, districtID, lastOrderNum int) time.Duration {
+	fmt.Fprintln(d.out, "[Popular-Item output]")
 	popularItems := make(map[int]*popularItemDetail)
 	allOrder := make(map[int]*popularOrderDetail)
 	// Transaction
+	start := time.Now()
 	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
 		// Get next order id
 		var n int
@@ -117,12 +118,13 @@ func (d *Driver) RunPopularItemTxn(warehouseID, districtID, lastOrderNum int) {
 		}
 		return nil
 	}); err != nil {
-		fmt.Fprintln(os.Stderr, "run popular item txn failed:", err)
-		return
+		fmt.Fprintln(d.errOut, "run popular item txn failed:", err)
+		return 0
 	}
+	duration := time.Since(start)
 	// Output
-	fmt.Fprintln(os.Stdout, warehouseID, districtID)
-	fmt.Fprintln(os.Stdout, lastOrderNum)
+	fmt.Fprintln(d.out, warehouseID, districtID)
+	fmt.Fprintln(d.out, lastOrderNum)
 	for orderID, p := range allOrder {
 		var orderDate string
 		if p.date.Valid {
@@ -130,18 +132,19 @@ func (d *Driver) RunPopularItemTxn(warehouseID, districtID, lastOrderNum int) {
 		} else {
 			orderDate = "NULL"
 		}
-		fmt.Fprintln(os.Stdout, orderID, orderDate)
-		fmt.Fprintln(os.Stdout, p.firstName, p.middleName, p.lastName)
+		fmt.Fprintln(d.out, orderID, orderDate)
+		fmt.Fprintln(d.out, p.firstName, p.middleName, p.lastName)
 		for itemID, quantity := range p.item2Quantity {
 			if quantity >= p.maxQuantity {
-				fmt.Fprintln(os.Stdout, popularItems[itemID].name, quantity)
+				fmt.Fprintln(d.out, popularItems[itemID].name, quantity)
 			}
 		}
 	}
 	for _, p := range popularItems {
-		fmt.Fprintln(os.Stdout,
+		fmt.Fprintln(d.out,
 			p.name, fmt.Sprintf("%.2f%%", 100*float64(len(p.orderSet))/float64(len(allOrder))),
 		)
 	}
-	fmt.Fprintln(os.Stdout, "[Popular-Item done]")
+	fmt.Fprintln(d.out, "[Popular-Item done]")
+	return duration
 }

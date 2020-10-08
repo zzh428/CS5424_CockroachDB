@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -30,13 +29,13 @@ type newOrderOutput struct {
 	entryDate             time.Time
 }
 
-func (d *Driver) RunNewOrderTxn(customerID, warehouseID, districtID, itemNum int) {
+func (d *Driver) RunNewOrderTxn(customerID, warehouseID, districtID, itemNum int) time.Duration {
 	items, err := d.getNewOrderItems(itemNum)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "get new order items failed", err)
-		return
+		fmt.Fprintln(d.errOut, "get new order items failed", err)
+		return 0
 	}
-	fmt.Fprintln(os.Stdout, "[New-Order output]")
+	fmt.Fprintln(d.out, "[New-Order output]")
 	allLocal := 1
 	for _, item := range items {
 		if item.warehouseID != warehouseID {
@@ -46,6 +45,7 @@ func (d *Driver) RunNewOrderTxn(customerID, warehouseID, districtID, itemNum int
 	}
 	var output newOrderOutput
 	// Transaction
+	start := time.Now()
 	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
 		// Get next order id
 		if err := tx.QueryRow(
@@ -135,18 +135,20 @@ func (d *Driver) RunNewOrderTxn(customerID, warehouseID, districtID, itemNum int
 		output.totalAmount *= (1 + output.dTax + output.wTax) * (1 - output.cDiscount)
 		return nil
 	}); err != nil {
-		fmt.Fprintln(os.Stderr, "run new order txn failed:", err)
-		return
+		fmt.Fprintln(d.errOut, "run new order txn failed:", err)
+		return 0
 	}
+	duration := time.Since(start)
 	// Output
-	fmt.Fprintln(os.Stdout, warehouseID, districtID, customerID, output.cLast, output.cCredit, output.cDiscount)
-	fmt.Fprintln(os.Stdout, output.wTax, output.dTax)
-	fmt.Fprintln(os.Stdout, output.orderID, output.entryDate.Format("2006/01/02 15:04:05 PM"))
-	fmt.Fprintln(os.Stdout, itemNum, output.totalAmount)
+	fmt.Fprintln(d.out, warehouseID, districtID, customerID, output.cLast, output.cCredit, output.cDiscount)
+	fmt.Fprintln(d.out, output.wTax, output.dTax)
+	fmt.Fprintln(d.out, output.orderID, output.entryDate.Format("2006/01/02 15:04:05 PM"))
+	fmt.Fprintln(d.out, itemNum, output.totalAmount)
 	for _, item := range items {
-		fmt.Fprintln(os.Stdout, item.id, item.name, item.warehouseID, item.quantity, item.amount, item.sQuantity)
+		fmt.Fprintln(d.out, item.id, item.name, item.warehouseID, item.quantity, item.amount, item.sQuantity)
 	}
-	fmt.Fprintln(os.Stdout, "[New-Order done]")
+	fmt.Fprintln(d.out, "[New-Order done]")
+	return duration
 }
 
 func (d *Driver) getNewOrderItems(num int) ([]*newOrderItem, error) {

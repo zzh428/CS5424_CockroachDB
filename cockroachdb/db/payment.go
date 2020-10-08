@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
+	"time"
 
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
@@ -17,10 +17,11 @@ type paymentOutput struct {
 	dStreet1, dStreet2, dCity, dState, dZip                          string
 }
 
-func (d *Driver) RunPaymentTxn(warehouseID, districtID, customerID int, payment float64) {
-	fmt.Fprintln(os.Stdout, "[Payment out]")
+func (d *Driver) RunPaymentTxn(warehouseID, districtID, customerID int, payment float64) time.Duration {
+	fmt.Fprintln(d.out, "[Payment out]")
 	var out paymentOutput
 	// Transaction
+	start := time.Now()
 	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
 		// Update warehouse
 		if _, err := tx.Exec(
@@ -67,15 +68,17 @@ func (d *Driver) RunPaymentTxn(warehouseID, districtID, customerID int, payment 
 		}
 		return nil
 	}); err != nil {
-		fmt.Fprintln(os.Stderr, "run payment txn failed:", err)
-		return
+		fmt.Fprintln(d.errOut, "run payment txn failed:", err)
+		return 0
 	}
+	duration := time.Since(start)
 	// Output
-	fmt.Fprintln(os.Stdout, out.cFirst, out.cMiddle, out.cLast)
-	fmt.Fprintln(os.Stdout, out.cStreet1, out.cStreet2, out.cCity, out.cState, out.cZip)
-	fmt.Fprintln(os.Stdout, out.cPhone, out.cSince, out.cCredit, out.cCreditLimit, out.cDiscount, out.cBalance)
-	fmt.Fprintln(os.Stdout, out.wStreet1, out.wStreet2, out.wCity, out.wState, out.wZip)
-	fmt.Fprintln(os.Stdout, out.dStreet1, out.dStreet2, out.dCity, out.dState, out.dZip)
-	fmt.Fprintln(os.Stdout, payment)
-	fmt.Fprintln(os.Stdout, "[Payment done]")
+	fmt.Fprintln(d.out, out.cFirst, out.cMiddle, out.cLast)
+	fmt.Fprintln(d.out, out.cStreet1, out.cStreet2, out.cCity, out.cState, out.cZip)
+	fmt.Fprintln(d.out, out.cPhone, out.cSince, out.cCredit, out.cCreditLimit, out.cDiscount, out.cBalance)
+	fmt.Fprintln(d.out, out.wStreet1, out.wStreet2, out.wCity, out.wState, out.wZip)
+	fmt.Fprintln(d.out, out.dStreet1, out.dStreet2, out.dCity, out.dState, out.dZip)
+	fmt.Fprintln(d.out, payment)
+	fmt.Fprintln(d.out, "[Payment done]")
+	return duration
 }

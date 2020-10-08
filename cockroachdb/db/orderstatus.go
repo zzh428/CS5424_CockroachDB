@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
+	"time"
 
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
@@ -23,11 +23,12 @@ type orderStatusItem struct {
 	date                          sql.NullTime
 }
 
-func (d *Driver) RunOrderStatusTxn(warehouseID, districtID, customerID int) {
-	fmt.Fprintln(os.Stdout, "[Order-Status output]")
+func (d *Driver) RunOrderStatusTxn(warehouseID, districtID, customerID int) time.Duration {
+	fmt.Fprintln(d.out, "[Order-Status output]")
 	var out orderStatusOutput
 	items := make([]orderStatusItem, 0)
 	// Transaction
+	start := time.Now()
 	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
 		// Get customer info
 		if err := tx.QueryRow(
@@ -61,9 +62,10 @@ func (d *Driver) RunOrderStatusTxn(warehouseID, districtID, customerID int) {
 		}
 		return nil
 	}); err != nil {
-		fmt.Fprintln(os.Stderr, "run order status txn failed:", err)
-		return
+		fmt.Fprintln(d.errOut, "run order status txn failed:", err)
+		return 0
 	}
+	duration := time.Since(start)
 	// Output
 	var orderDate, orderCarrierID string
 	if out.orderDate.Valid {
@@ -76,8 +78,8 @@ func (d *Driver) RunOrderStatusTxn(warehouseID, districtID, customerID int) {
 	} else {
 		orderCarrierID = "NULL"
 	}
-	fmt.Fprintln(os.Stdout, out.cFirst, out.cMiddle, out.cLast, out.cBalance)
-	fmt.Fprintln(os.Stdout, out.orderID, orderDate, orderCarrierID)
+	fmt.Fprintln(d.out, out.cFirst, out.cMiddle, out.cLast, out.cBalance)
+	fmt.Fprintln(d.out, out.orderID, orderDate, orderCarrierID)
 	for _, item := range items {
 		var itemDate string
 		if item.date.Valid {
@@ -85,7 +87,8 @@ func (d *Driver) RunOrderStatusTxn(warehouseID, districtID, customerID int) {
 		} else {
 			itemDate = "NULL"
 		}
-		fmt.Fprintln(os.Stdout, item.itemID, item.warehouseID, item.quantity, item.amount, itemDate)
+		fmt.Fprintln(d.out, item.itemID, item.warehouseID, item.quantity, item.amount, itemDate)
 	}
-	fmt.Fprintln(os.Stdout, "[Order-Status done]")
+	fmt.Fprintln(d.out, "[Order-Status done]")
+	return duration
 }

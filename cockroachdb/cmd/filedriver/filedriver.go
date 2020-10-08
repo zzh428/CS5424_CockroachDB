@@ -19,6 +19,7 @@ var (
 	endpointStr = kingpin.Flag("endpoints", "endpoint1,endpoint2,...").Required().String()
 	clientNum   = kingpin.Flag("num", "client num").Required().Int()
 	fileDir     = kingpin.Flag("dir", "file directory").Required().String()
+	fileOutput  = kingpin.Flag("out-file", "output to file").Default("false").Bool()
 )
 
 func main() {
@@ -35,7 +36,16 @@ func main() {
 				log.Fatalf("open file %s failed: %v", i, err)
 			}
 			defer f.Close()
-			driver, err := db.NewDriver(*userName, endpoints[i%len(endpoints)], *database, f)
+			var driver *db.Driver
+			if *fileOutput {
+				outFile, err := os.Open(filepath.Join(*fileDir, fmt.Sprintf("%v.out", i)))
+				if err != nil {
+					log.Fatalf("open output file %v failed: %v", i, err)
+				}
+				driver, err = db.NewDriver(*userName, endpoints[i%len(endpoints)], *database, f, outFile, outFile)
+			} else {
+				driver, err = db.NewDriver(*userName, endpoints[i%len(endpoints)], *database, f, os.Stdout, os.Stderr)
+			}
 			if err != nil {
 				log.Fatalf("new db driver failed: %v", err)
 			}

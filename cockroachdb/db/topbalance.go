@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
+	"time"
 
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
@@ -16,10 +16,11 @@ type topBalanceCustomer struct {
 	first, middle, last         string
 }
 
-func (d *Driver) RunTopBalanceTxn() {
-	fmt.Fprintln(os.Stdout, "[Top-Balance output]")
+func (d *Driver) RunTopBalanceTxn() time.Duration {
+	fmt.Fprintln(d.out, "[Top-Balance output]")
 	topTenCustomers := make([]*topBalanceCustomer, 0)
 	// Transaction
+	start := time.Now()
 	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
 		// Get top 10 balance customers
 		rows, err := tx.Query("SELECT c_first, c_middle, c_last, c_balance, c_w_id, c_d_id FROM customer ORDER BY c_balance DESC LIMIT 10")
@@ -51,15 +52,17 @@ func (d *Driver) RunTopBalanceTxn() {
 		}
 		return nil
 	}); err != nil {
-		fmt.Fprintln(os.Stderr, "run top balance txn failed:", err)
-		return
+		fmt.Fprintln(d.errOut, "run top balance txn failed:", err)
+		return 0
 	}
+	duration := time.Since(start)
 	// Output
 	for _, c := range topTenCustomers {
-		fmt.Fprintln(os.Stdout, c.first, c.middle, c.last)
-		fmt.Fprintln(os.Stdout, c.balance)
-		fmt.Fprintln(os.Stdout, c.warehouseName)
-		fmt.Fprintln(os.Stdout, c.districtName)
+		fmt.Fprintln(d.out, c.first, c.middle, c.last)
+		fmt.Fprintln(d.out, c.balance)
+		fmt.Fprintln(d.out, c.warehouseName)
+		fmt.Fprintln(d.out, c.districtName)
 	}
-	fmt.Fprintln(os.Stdout, "[Top-Balance done]")
+	fmt.Fprintln(d.out, "[Top-Balance done]")
+	return duration
 }

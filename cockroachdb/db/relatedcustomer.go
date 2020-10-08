@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
+	"time"
 
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
@@ -13,10 +13,11 @@ type relatedCustomerInfo struct {
 	warehouseID, districtID, customerID int
 }
 
-func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) {
-	fmt.Fprintln(os.Stdout, "[Related-Customer output]")
+func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) time.Duration {
+	fmt.Fprintln(d.out, "[Related-Customer output]")
 	customers := make(map[int]struct{})
 	// Transaction
+	start := time.Now()
 	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
 		// Get customer's all order items
 		orderItems := make(map[int]map[int]struct{})
@@ -94,13 +95,15 @@ func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) 
 		}
 		return nil
 	}); err != nil {
-		fmt.Fprintln(os.Stderr, "run related customer txn failed:", err)
-		return
+		fmt.Fprintln(d.errOut, "run related customer txn failed:", err)
+		return 0
 	}
+	duration := time.Since(start)
 	// Output
-	fmt.Fprintln(os.Stdout, warehouseID, districtID, customerID)
+	fmt.Fprintln(d.out, warehouseID, districtID, customerID)
 	for c := range customers {
-		fmt.Fprintln(os.Stdout, c)
+		fmt.Fprintln(d.out, c)
 	}
-	fmt.Fprintln(os.Stdout, "[Related-Customer done]")
+	fmt.Fprintln(d.out, "[Related-Customer done]")
+	return duration
 }
