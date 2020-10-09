@@ -38,9 +38,9 @@ func main() {
 			defer f.Close()
 			var driver *db.Driver
 			if *fileOutput {
-				outFile, err := os.Open(filepath.Join(*fileDir, fmt.Sprintf("%v.out", i)))
+				outFile, err := os.Create(filepath.Join(*fileDir, fmt.Sprintf("%v.out", i)))
 				if err != nil {
-					log.Fatalf("open output file %v failed: %v", i, err)
+					log.Fatalf("create output file %v failed: %v", i, err)
 				}
 				driver, err = db.NewDriver(*userName, endpoints[i%len(endpoints)], *database, f, outFile, outFile)
 			} else {
