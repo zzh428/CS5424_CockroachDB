@@ -5,4 +5,4 @@ else
 fi
 echo "Data dir:" $DIR
 cockroach start-single-node --insecure --listen-addr=localhost:26257 --http-addr=localhost:8080 --store $DIR --background
-cockroach sql --insecure --host=localhost:26257 < init.sql
+cockroach sql --insecure --host=localhost:26257 < ../src/init.sql

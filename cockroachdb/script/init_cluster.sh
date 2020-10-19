@@ -1,1 +1,0 @@
-cockroach sql --insecure < init_cluster.sql

@@ -11,7 +11,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"../utils"
+	"cs5424/cockroachdb/utils"
 )
 
 const dbSourceName = "postgresql://%s@%s/%s?sslmode=disable"
