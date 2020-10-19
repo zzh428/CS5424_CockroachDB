@@ -10,7 +10,7 @@ import (
 
 	"github.com/alecthomas/kingpin"
 
-	"cs5424/cockroachdb/db"
+	"../../db"
 )
 
 var (

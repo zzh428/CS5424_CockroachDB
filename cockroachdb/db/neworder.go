@@ -9,7 +9,7 @@ import (
 
 	"github.com/cockroachdb/cockroach-go/crdb"
 
-	"cs5424/cockroachdb/utils"
+	"../utils"
 )
 
 type newOrderItem struct {
