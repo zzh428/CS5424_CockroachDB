@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/alecthomas/kingpin"
@@ -16,8 +15,10 @@ import (
 var (
 	userName    = kingpin.Flag("user", "user name").Default("root").String()
 	database    = kingpin.Flag("database", "database name").Default("wholesale").String()
-	endpointStr = kingpin.Flag("endpoints", "endpoint1,endpoint2,...").Required().String()
-	clientNum   = kingpin.Flag("num", "client num").Required().Int()
+	endpointStr = kingpin.Flag("endpoint", "endpoint of local node").Required().String()
+	serverNum   = kingpin.Flag("server-num", "total number of all server node").Default("5").Int()
+	serverSeq   = kingpin.Flag("sever-seq", "sequence of local server, start from 0").Required().Int()
+	txnFileNum  = kingpin.Flag("txn-file-num", "20 or 40").Required().Int()
 	fileDir     = kingpin.Flag("dir", "file directory").Required().String()
 	fileOutput  = kingpin.Flag("out-file", "output to file").Default("false").Bool()
 )
@@ -25,26 +26,27 @@ var (
 func main() {
 	kingpin.Parse()
 
-	endpoints := strings.Split(*endpointStr, ",")
 	wg := &sync.WaitGroup{}
-	for i := 1; i <= *clientNum; i++ {
+	for i := *serverSeq; i <= *txnFileNum; i += *serverNum {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			f, err := os.Open(filepath.Join(*fileDir, fmt.Sprintf("%v.txt", i)))
 			if err != nil {
-				log.Fatalf("open file %s failed: %v", i, err)
+				log.Fatalf("open file %v failed: %v", i, err)
 			}
 			defer f.Close()
 			var driver *db.Driver
 			if *fileOutput {
-				outFile, err := os.Create(filepath.Join(*fileDir, fmt.Sprintf("%v.out", i)))
+				var outFile *os.File
+				outFile, err = os.Create(filepath.Join(*fileDir, fmt.Sprintf("%v.out", i)))
 				if err != nil {
 					log.Fatalf("create output file %v failed: %v", i, err)
 				}
-				driver, err = db.NewDriver(*userName, endpoints[i%len(endpoints)], *database, f, outFile, outFile)
+				defer outFile.Close()
+				driver, err = db.NewDriver(*userName, *endpointStr, *database, f, outFile, outFile)
 			} else {
-				driver, err = db.NewDriver(*userName, endpoints[i%len(endpoints)], *database, f, os.Stdout, os.Stderr)
+				driver, err = db.NewDriver(*userName, *endpointStr, *database, f, os.Stdout, os.Stderr)
 			}
 			if err != nil {
 				log.Fatalf("new db driver failed: %v", err)
