@@ -70,6 +70,7 @@ func (d *Driver) RunNewOrderTxn(customerID, warehouseID, districtID, itemNum int
 			return err
 		}
 		// Item operations
+		orderlineQuery := "INSERT INTO orderline (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info, ol_delivery_d) VALUES "
 		for i := range items {
 			// Update stock
 			if err := tx.QueryRow(
@@ -107,12 +108,21 @@ func (d *Driver) RunNewOrderTxn(customerID, warehouseID, districtID, itemNum int
 			}
 			items[i].amount = float64(items[i].quantity) * itemPrice
 			output.totalAmount += items[i].amount
-			if _, err := tx.Exec(
-				"INSERT INTO orderline (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info, ol_delivery_d) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL)",
-				output.orderID, districtID, warehouseID, i, items[i].id, items[i].warehouseID, items[i].quantity, items[i].amount, fmt.Sprintf("S_DIST_%v", districtID),
-			); err != nil {
-				return err
-			}
+			orderlineQuery += fmt.Sprintf("(%d,%d,%d,%d,%d,%d,%d,%f,'%s',NULL),",
+				output.orderID, districtID, warehouseID, i, items[i].id, items[i].warehouseID, items[i].quantity, items[i].amount, fmt.Sprintf("S_DIST_%v", districtID))
+			//if _, err := tx.Exec(
+			//	"INSERT INTO orderline (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info, ol_delivery_d) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL)",
+			//	output.orderID, districtID, warehouseID, i, items[i].id, items[i].warehouseID, items[i].quantity, items[i].amount, fmt.Sprintf("S_DIST_%v", districtID),
+			//); err != nil {
+			//	return err
+			//}
+		}
+		//fmt.Fprintln(d.out, orderlineQuery[:len(orderlineQuery)-1])
+		if _, err := tx.Exec(
+			orderlineQuery[:len(orderlineQuery)-1],
+		); err != nil {
+			fmt.Fprintln(d.out, "run new order txn failed:", err)
+			return err
 		}
 		if err := tx.QueryRow(
 			"SELECT w_tax FROM warehouse WHERE w_id = $1",
