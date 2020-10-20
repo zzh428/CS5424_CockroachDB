@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sort"
 	"strings"
 	"time"
 
@@ -37,10 +38,7 @@ func NewDriver(user, endpoint, database string, r io.Reader, w io.Writer, errOut
 }
 
 func (d *Driver) Run() {
-	txnTime := make([][]time.Duration, 0)
-	for i := 0; i < 8; i++ {
-		txnTime = append(txnTime, make([]time.Duration, 0))
-	}
+	txnTime := make([]time.Duration, 0)
 	for {
 		line, _, err := d.br.ReadLine()
 		if err == io.EOF {
@@ -61,57 +59,64 @@ func (d *Driver) Run() {
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime[0] = append(txnTime[0], d.RunNewOrderTxn(nums[0], nums[1], nums[2], nums[3]))
+			txnTime = append(txnTime, d.RunNewOrderTxn(nums[0], nums[1], nums[2], nums[3]))
 		case "P":
 			nums, err := utils.StringsToFloats(paras[1:])
 			if err != nil {
 				log.Fatalf("parse float failed: %v", err)
 			}
-			txnTime[1] = append(txnTime[1], d.RunPaymentTxn(int(nums[0]), int(nums[1]), int(nums[2]), nums[3]))
+			txnTime = append(txnTime, d.RunPaymentTxn(int(nums[0]), int(nums[1]), int(nums[2]), nums[3]))
 		case "D":
 			nums, err := utils.StringsToInts(paras[1:])
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime[2] = append(txnTime[2], d.RunDeliveryTxn(nums[0], nums[1]))
+			txnTime = append(txnTime, d.RunDeliveryTxn(nums[0], nums[1]))
 		case "O":
 			nums, err := utils.StringsToInts(paras[1:])
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime[3] = append(txnTime[3], d.RunOrderStatusTxn(nums[0], nums[1], nums[2]))
+			txnTime = append(txnTime, d.RunOrderStatusTxn(nums[0], nums[1], nums[2]))
 		case "S":
 			nums, err := utils.StringsToInts(paras[1:])
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime[4] = append(txnTime[4], d.RunStockLevelTxn(nums[0], nums[1], nums[2], nums[3]))
+			txnTime = append(txnTime, d.RunStockLevelTxn(nums[0], nums[1], nums[2], nums[3]))
 		case "I":
 			nums, err := utils.StringsToInts(paras[1:])
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime[5] = append(txnTime[5], d.RunPopularItemTxn(nums[0], nums[1], nums[2]))
+			txnTime = append(txnTime, d.RunPopularItemTxn(nums[0], nums[1], nums[2]))
 		case "T":
-			txnTime[6] = append(txnTime[6], d.RunTopBalanceTxn())
+			txnTime = append(txnTime, d.RunTopBalanceTxn())
 		case "R":
 			nums, err := utils.StringsToInts(paras[1:])
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime[7] = append(txnTime[7], d.RunRelatedCustomerTxn(nums[0], nums[1], nums[2]))
+			txnTime = append(txnTime, d.RunRelatedCustomerTxn(nums[0], nums[1], nums[2]))
 		default:
 			fmt.Printf("invalid transaction: %s\n", paras[0])
 		}
 	}
-	//TODO: Output the following
-	// Total number of transactions processed
-	// Total elapsed time for processing the transactions (in seconds)
-	// Transaction throughput (number of transactions processed per second)
-	// Average transaction latency (in ms)
-	// Median transaction latency (in ms)
-	// 95th percentile transaction latency (in ms)
-	// 99th percentile transaction latency (in ms)
+	// Output
+	var totalElapsed time.Duration
+	sort.Slice(txnTime, func(i, j int) bool {
+		return txnTime[i] < txnTime[j]
+	})
+	for _, t := range txnTime {
+		totalElapsed += t
+	}
+	fmt.Fprintf(d.out, "Total number of transactions processed: %v\n", len(txnTime))
+	fmt.Fprintf(d.out, "Total elapsed time for processing the transactions: %vs\n", totalElapsed.Seconds())
+	fmt.Fprintf(d.out, "Transaction throughput: %vtxn/s\n", float64(len(txnTime))/totalElapsed.Seconds())
+	fmt.Fprintf(d.out, "Average transaction latency: %vms\n", float64(totalElapsed.Milliseconds())/float64(len(txnTime)))
+	fmt.Fprintf(d.out, "Median transaction latency: %vms\n", txnTime[len(txnTime)/2].Milliseconds())
+	fmt.Fprintf(d.out, "95th percentile transaction latency: %vms\n", txnTime[int(float64(len(txnTime))*0.95)].Milliseconds())
+	fmt.Fprintf(d.out, "99th percentile transaction latency: %vms\n", txnTime[int(float64(len(txnTime))*0.99)].Milliseconds())
 }
 
 func (d *Driver) Stop() error {
