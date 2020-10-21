@@ -97,9 +97,10 @@ OL_AMOUNT DECIMAL(6,2),
 OL_SUPPLY_W_ID INT,
 OL_QUANTITY DECIMAL(2,0),
 OL_DIST_INFO CHAR(24),
+OL_C_ID INT,
 PRIMARY KEY(OL_W_ID, OL_D_ID, OL_O_ID, OL_NUMBER)
-) CSV DATA ('nodelocal://1/project-files/data-files/order-line.csv') WITH nullif = 'null';
---CREATE INDEX ON ORDERLINE(OL_I_ID);
+) CSV DATA ('nodelocal://1/project-files/data-files/order-line-new.csv') WITH nullif = 'null';
+CREATE INDEX ON ORDERLINE(OL_W_ID, OL_I_ID);
 DROP TABLE IF EXISTS STOCK;
 IMPORT TABLE STOCK (
 S_W_ID INT,
