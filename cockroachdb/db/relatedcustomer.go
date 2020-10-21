@@ -30,6 +30,7 @@ func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) 
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var orderID, itemID int
 			if err := rows.Scan(&orderID, &itemID); err != nil {
@@ -41,8 +42,6 @@ func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) 
 			itemOrderMap[itemID] = append(itemOrderMap[itemID], orderID)
 			items[itemID] = struct{}{}
 		}
-
-		rows.Close()
 		// Get all orders that contain an item
 		for item := range items {
 			orders := itemOrderMap[item]
@@ -57,6 +56,7 @@ func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) 
 				var info relatedCustomerInfo
 				var orderID int
 				if err := rows.Scan(&info.warehouseID, &info.districtID, &info.customerID, &orderID); err != nil {
+					rows.Close()
 					return err
 				}
 				if _, ok := relatedCustomers[info]; ok {
