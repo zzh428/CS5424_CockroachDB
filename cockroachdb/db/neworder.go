@@ -137,8 +137,8 @@ func (d *Driver) RunNewOrderTxn(customerID, warehouseID, districtID, itemNum int
 			return err
 		}
 		if err := tx.QueryRow(
-			"SELECT c_discount, c_last, c_credit FROM customer WHERE c_id = $1",
-			customerID,
+			"SELECT c_discount, c_last, c_credit FROM customer WHERE c_w_id = $1 AND c_d_id = $2 AND c_id = $3",
+			warehouseID, districtID, customerID,
 		).Scan(&output.cDiscount, &output.cLast, &output.cCredit); err != nil {
 			return err
 		}
