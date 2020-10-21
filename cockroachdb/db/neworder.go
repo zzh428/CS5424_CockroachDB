@@ -109,7 +109,7 @@ func (d *Driver) RunNewOrderTxn(customerID, warehouseID, districtID, itemNum int
 			items[i].amount = float64(items[i].quantity) * itemPrice
 			output.totalAmount += items[i].amount
 			orderlineQuery += fmt.Sprintf("(%d,%d,%d,%d,%d,%d,%d,%f,'%s',%d,NULL),",
-				output.orderID, districtID, warehouseID, i, items[i].id, items[i].warehouseID, items[i].quantity, items[i].amount, fmt.Sprintf("S_DIST_%v", districtID),customerID)
+				output.orderID, districtID, warehouseID, i, items[i].id, items[i].warehouseID, items[i].quantity, items[i].amount, fmt.Sprintf("S_DIST_%v", districtID), customerID)
 			//if _, err := tx.Exec(
 			//	"INSERT INTO orderline (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info, ol_delivery_d) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL)",
 			//	output.orderID, districtID, warehouseID, i, items[i].id, items[i].warehouseID, items[i].quantity, items[i].amount, fmt.Sprintf("S_DIST_%v", districtID),

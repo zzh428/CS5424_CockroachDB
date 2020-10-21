@@ -31,6 +31,7 @@ func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) 
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var orderID, itemID int
 			if err := rows.Scan(&orderID, &itemID); err != nil {
