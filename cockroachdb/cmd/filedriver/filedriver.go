@@ -77,7 +77,7 @@ func main() {
 		log.Fatalf("invalid experiment: client_num[%v], server_num[%v]", *txnFileNum, *serverNum)
 	}
 	// Clients csv
-	csvClients, err := os.Create(filepath.Join(*fileDir, fmt.Sprintf("clients-%s.csv", experimentNum)))
+	csvClients, err := os.Create(filepath.Join(*fileDir, fmt.Sprintf("clients-%s-%d.csv", experimentNum, *serverSeq)))
 	if err != nil {
 		log.Fatalf("create clients csv failed: %v", err)
 	}

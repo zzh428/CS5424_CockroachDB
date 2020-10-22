@@ -17,13 +17,17 @@ func (d *Driver) RunDeliveryTxn(db *sql.DB, warehouseID, carrierID int) time.Dur
 		// District 1 to 10
 		for districtID := 1; districtID <= 10; districtID++ {
 			// Get smallest order number
-			var orderID int
+			var orderIDNull sql.NullInt64
 			if err := tx.QueryRow(
 				"SELECT min(o_id) FROM orders WHERE o_w_id = $1 AND o_d_id = $2 AND o_carrier_id is NULL",
 				warehouseID, districtID,
-			).Scan(&orderID); err != nil {
+			).Scan(&orderIDNull); err != nil {
 				return err
 			}
+			if !orderIDNull.Valid {
+				continue
+			}
+			orderID := orderIDNull.Int64
 			// Update order
 			if _, err := tx.Exec(
 				"UPDATE orders SET o_carrier_id = $1 WHERE o_w_id = $2 AND o_d_id = $3 AND o_id = $4",
@@ -39,20 +43,30 @@ func (d *Driver) RunDeliveryTxn(db *sql.DB, warehouseID, carrierID int) time.Dur
 				return err
 			}
 			//Update customer
-			var amount float64
+			var amountNull sql.NullFloat64
 			if err := tx.QueryRow(
 				"SELECT sum(ol_amount) FROM orderline WHERE ol_w_id = $1 AND ol_d_id = $2 AND ol_o_id = $3",
 				warehouseID, districtID, orderID,
-			).Scan(&amount); err != nil {
+			).Scan(&amountNull); err != nil {
 				return err
 			}
-			var customerID int
+			var amount float64
+			if amountNull.Valid {
+				amount = amountNull.Float64
+			} else {
+				amount = 0
+			}
+			var customerIDNull sql.NullInt64
 			if err := tx.QueryRow(
 				"SELECT o_c_id FROM orders WHERE o_w_id = $1 AND o_d_id = $2 AND o_id = $3",
 				warehouseID, districtID, orderID,
-			).Scan(&customerID); err != nil {
+			).Scan(&customerIDNull); err != nil {
 				return err
 			}
+			if !customerIDNull.Valid {
+				continue
+			}
+			customerID := customerIDNull.Int64
 			if _, err := tx.Exec(
 				"UPDATE customer SET c_balance = c_balance + $1, c_delivery_cnt = c_delivery_cnt + 1 WHERE c_w_id = $2 AND c_d_id = $3 AND c_id = $4",
 				amount, warehouseID, districtID, customerID,

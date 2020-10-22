@@ -32,6 +32,7 @@ func (d *Driver) RunRelatedCustomerTxn(db *sql.DB, warehouseID, districtID, cust
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var orderID, itemID int
 			if err := rows.Scan(&orderID, &itemID); err != nil {
@@ -43,7 +44,6 @@ func (d *Driver) RunRelatedCustomerTxn(db *sql.DB, warehouseID, districtID, cust
 			itemOrderMap[itemID] = append(itemOrderMap[itemID], orderID)
 			itemSet[itemID] = struct{}{}
 		}
-		defer rows.Close()
 		items := make([]int, 0)
 		for item := range itemSet {
 			items = append(items, item)
@@ -55,6 +55,7 @@ func (d *Driver) RunRelatedCustomerTxn(db *sql.DB, warehouseID, districtID, cust
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var info relatedCustomerInfo
 			var orderID int
@@ -80,43 +81,6 @@ func (d *Driver) RunRelatedCustomerTxn(db *sql.DB, warehouseID, districtID, cust
 				}
 			}
 		}
-		defer rows.Close()
-		// Get all orders that contain an item
-		//for item := range itemSet {
-		//	orders := itemOrderMap[item]
-		//	rows, err = tx.Query(
-		//		"SELECT ol_w_id, ol_d_id, ol_c_id, ol_o_id FROM orderline WHERE ol_w_id != $1 AND ol_i_id = $2",
-		//		warehouseID, item,
-		//	)
-		//	if err != nil {
-		//		return err
-		//	}
-		//	for rows.Next() {
-		//		var info relatedCustomerInfo
-		//		var orderID int
-		//		if err := rows.Scan(&info.warehouseID, &info.districtID, &info.customerID, &orderID); err != nil {
-		//			rows.Close()
-		//			return err
-		//		}
-		//		if _, ok := relatedCustomers[info]; ok {
-		//			continue
-		//		}
-		//		if _, ok := customerOrderMap[info]; !ok {
-		//			customerOrderMap[info] = make(map[int]map[int]struct{})
-		//		}
-		//		if _, ok := customerOrderMap[info][orderID]; !ok {
-		//			customerOrderMap[info][orderID] = make(map[int]struct{})
-		//		}
-		//		for _, o := range orders {
-		//			if _, ok := customerOrderMap[info][orderID][o]; !ok {
-		//				customerOrderMap[info][orderID][o] = struct{}{}
-		//			} else {
-		//				relatedCustomers[info] = struct{}{}
-		//			}
-		//		}
-		//	}
-		//	rows.Close()
-		//}
 		return nil
 	}); err != nil {
 		fmt.Fprintln(d.out, "run related customer txn failed:", err)

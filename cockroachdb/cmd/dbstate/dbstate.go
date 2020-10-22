@@ -47,31 +47,42 @@ func main() {
 		log.Fatalf("write db state csv failed: %v", err)
 	}
 
-	resLine := make([]string, 16)
-	resLine[0] = *experimentNum
+	resLineNull := make([]sql.NullString, 16)
+	resLineNull[0] = sql.NullString{
+		String: *experimentNum,
+		Valid:  true,
+	}
 	if err := db.QueryRow("SELECT sum(w_ytd) FROM warehouse").
-		Scan(&resLine[1]); err != nil {
+		Scan(&resLineNull[1]); err != nil {
 		log.Fatalf("query failed: %v", err)
 	}
 	if err := db.QueryRow("SELECT sum(d_ytd), sum(d_next_o_id) FROM district").
-		Scan(&resLine[2], &resLine[3]); err != nil {
+		Scan(&resLineNull[2], &resLineNull[3]); err != nil {
 		log.Fatalf("query failed: %v", err)
 	}
 	if err := db.QueryRow("SELECT sum(c_balance), sum(c_ytd_payment), sum(c_payment_cnt), sum(c_delivery_cnt) FROM customer").
-		Scan(&resLine[4], &resLine[5], &resLine[6], &resLine[7]); err != nil {
+		Scan(&resLineNull[4], &resLineNull[5], &resLineNull[6], &resLineNull[7]); err != nil {
 		log.Fatalf("query failed: %v", err)
 	}
 	if err := db.QueryRow("SELECT max(o_id), sum(o_ol_cnt) FROM orders").
-		Scan(&resLine[8], &resLine[9]); err != nil {
+		Scan(&resLineNull[8], &resLineNull[9]); err != nil {
 		log.Fatalf("query failed: %v", err)
 	}
 	if err := db.QueryRow("SELECT sum(ol_amount), sum(ol_quantity) FROM orderline").
-		Scan(&resLine[10], &resLine[11]); err != nil {
+		Scan(&resLineNull[10], &resLineNull[11]); err != nil {
 		log.Fatalf("query failed: %v", err)
 	}
 	if err := db.QueryRow("SELECT sum(s_quantity), sum(s_ytd), sum(s_order_cnt), sum(s_remote_cnt) FROM stock").
-		Scan(&resLine[12], &resLine[13], &resLine[14], &resLine[15]); err != nil {
+		Scan(&resLineNull[12], &resLineNull[13], &resLineNull[14], &resLineNull[15]); err != nil {
 		log.Fatalf("query failed: %v", err)
+	}
+	resLine := make([]string, 16)
+	for i, strNull := range resLineNull {
+		if strNull.Valid {
+			resLine[i] = strNull.String
+		} else {
+			resLine[i] = "0"
+		}
 	}
 	if err := cw.Write(resLine); err != nil {
 		log.Fatalf("write db state csv failed: %v", err)
