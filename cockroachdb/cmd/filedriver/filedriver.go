@@ -33,7 +33,7 @@ func main() {
 	var measurements sync.Map
 
 	wg := &sync.WaitGroup{}
-	for i := *serverSeq; i <= *txnFileNum; i += *serverNum {
+	for i := *serverSeq; i <= *txnFileNum; i += 5 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
