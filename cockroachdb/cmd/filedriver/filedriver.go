@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"log"
 	"os"
@@ -25,6 +26,8 @@ var (
 
 func main() {
 	kingpin.Parse()
+
+	var measurements sync.Map
 
 	wg := &sync.WaitGroup{}
 	for i := *serverSeq; i <= *txnFileNum; i += *serverNum {
@@ -52,8 +55,47 @@ func main() {
 				log.Fatalf("new db driver failed: %v", err)
 			}
 			defer driver.Stop()
-			driver.Run()
+			measurements.Store(i, driver.Run())
 		}(i)
 	}
 	wg.Wait()
+
+	var experimentNum string
+	switch *txnFileNum + *serverNum {
+	case 24:
+		experimentNum = "5"
+	case 25:
+		experimentNum = "6"
+	case 44:
+		experimentNum = "7"
+	case 45:
+		experimentNum = "8"
+	default:
+		log.Fatalf("invalid experiment: client_num[%v], server_num[%v]", *txnFileNum, *serverNum)
+	}
+	// Clients csv
+	csvClients, err := os.Create(filepath.Join(*fileDir, fmt.Sprintf("clients-%s.csv", experimentNum)))
+	if err != nil {
+		log.Fatalf("create clients csv failed: %v", err)
+	}
+	defer csvClients.Close()
+
+	cw := csv.NewWriter(csvClients)
+	if err := cw.Write([]string{"experiment_number", "client_number", "measurement_a", "measurement_b", "measurement_c",
+		"measurement_d", "measurement_e", "measurement_f", "measurement_g"}); err != nil {
+		log.Fatalf("write clients csv failed: %v", err)
+	}
+	measurements.Range(func(key, value interface{}) bool {
+		k, v := key.(int), value.(db.ClientMeasurement)
+		if err := cw.Write([]string{experimentNum, fmt.Sprintf("%v", k), fmt.Sprintf("%v", v.TxnNum), fmt.Sprintf("%.2f", v.TotalSeconds), fmt.Sprintf("%.2f", v.Throughput),
+			fmt.Sprintf("%.2f", v.AverageLatency), fmt.Sprintf("%v", v.MedianLatency), fmt.Sprintf("%v", v.Latency95), fmt.Sprintf("%v", v.Latency99)}); err != nil {
+			log.Fatalf("write clients csv failed: %v", err)
+		}
+		return true
+	})
+
+	cw.Flush()
+	if err := cw.Error(); err != nil {
+		log.Fatalf("flush clients csv failed: %v", err)
+	}
 }
