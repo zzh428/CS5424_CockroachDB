@@ -18,7 +18,7 @@ import (
 const dbSourceName = "postgresql://%s@%s/%s?sslmode=disable"
 
 type Driver struct {
-	db     *sql.DB
+	dbs    []*sql.DB
 	br     *bufio.Reader
 	out    io.Writer
 	errOut io.Writer
@@ -34,14 +34,18 @@ type ClientMeasurement struct {
 	Latency99      int64
 }
 
-func NewDriver(user, endpoint, database string, r io.Reader, w io.Writer, errOut io.Writer) (*Driver, error) {
-	db, err := sql.Open("postgres",
-		fmt.Sprintf(dbSourceName, user, endpoint, database))
-	if err != nil {
-		return nil, err
+func NewDriver(user, database string, endpoints []string, r io.Reader, w io.Writer, errOut io.Writer) (*Driver, error) {
+	dbs := make([]*sql.DB, 0)
+	for _, endpoint := range endpoints {
+		db, err := sql.Open("postgres",
+			fmt.Sprintf(dbSourceName, user, endpoint, database))
+		if err != nil {
+			return nil, err
+		}
+		dbs = append(dbs, db)
 	}
 	return &Driver{
-		db:     db,
+		dbs:    dbs,
 		br:     bufio.NewReader(r),
 		out:    w,
 		errOut: errOut,
@@ -70,45 +74,45 @@ func (d *Driver) Run() ClientMeasurement {
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime = append(txnTime, d.RunNewOrderTxn(nums[0], nums[1], nums[2], nums[3]))
+			txnTime = append(txnTime, d.RunNewOrderTxn(d.dbs[len(txnTime)%len(d.dbs)], nums[0], nums[1], nums[2], nums[3]))
 		case "P":
 			nums, err := utils.StringsToFloats(paras[1:])
 			if err != nil {
 				log.Fatalf("parse float failed: %v", err)
 			}
-			txnTime = append(txnTime, d.RunPaymentTxn(int(nums[0]), int(nums[1]), int(nums[2]), nums[3]))
+			txnTime = append(txnTime, d.RunPaymentTxn(d.dbs[len(txnTime)%len(d.dbs)], int(nums[0]), int(nums[1]), int(nums[2]), nums[3]))
 		case "D":
 			nums, err := utils.StringsToInts(paras[1:])
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime = append(txnTime, d.RunDeliveryTxn(nums[0], nums[1]))
+			txnTime = append(txnTime, d.RunDeliveryTxn(d.dbs[len(txnTime)%len(d.dbs)], nums[0], nums[1]))
 		case "O":
 			nums, err := utils.StringsToInts(paras[1:])
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime = append(txnTime, d.RunOrderStatusTxn(nums[0], nums[1], nums[2]))
+			txnTime = append(txnTime, d.RunOrderStatusTxn(d.dbs[len(txnTime)%len(d.dbs)], nums[0], nums[1], nums[2]))
 		case "S":
 			nums, err := utils.StringsToInts(paras[1:])
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime = append(txnTime, d.RunStockLevelTxn(nums[0], nums[1], nums[2], nums[3]))
+			txnTime = append(txnTime, d.RunStockLevelTxn(d.dbs[len(txnTime)%len(d.dbs)], nums[0], nums[1], nums[2], nums[3]))
 		case "I":
 			nums, err := utils.StringsToInts(paras[1:])
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime = append(txnTime, d.RunPopularItemTxn(nums[0], nums[1], nums[2]))
+			txnTime = append(txnTime, d.RunPopularItemTxn(d.dbs[len(txnTime)%len(d.dbs)], nums[0], nums[1], nums[2]))
 		case "T":
-			txnTime = append(txnTime, d.RunTopBalanceTxn())
+			txnTime = append(txnTime, d.RunTopBalanceTxn(d.dbs[len(txnTime)%len(d.dbs)]))
 		case "R":
 			nums, err := utils.StringsToInts(paras[1:])
 			if err != nil {
 				log.Fatalf("parse int failed: %v", err)
 			}
-			txnTime = append(txnTime, d.RunRelatedCustomerTxn(nums[0], nums[1], nums[2]))
+			txnTime = append(txnTime, d.RunRelatedCustomerTxn(d.dbs[len(txnTime)%len(d.dbs)], nums[0], nums[1], nums[2]))
 		default:
 			fmt.Printf("invalid transaction: %s\n", paras[0])
 		}
@@ -143,5 +147,8 @@ func (d *Driver) Run() ClientMeasurement {
 }
 
 func (d *Driver) Stop() error {
-	return d.db.Close()
+	for _, db := range d.dbs {
+		db.Close()
+	}
+	return nil
 }

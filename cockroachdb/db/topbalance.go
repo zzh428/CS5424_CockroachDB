@@ -16,12 +16,12 @@ type topBalanceCustomer struct {
 	first, middle, last         string
 }
 
-func (d *Driver) RunTopBalanceTxn() time.Duration {
+func (d *Driver) RunTopBalanceTxn(db *sql.DB) time.Duration {
 	fmt.Fprintln(d.out, "[Top-Balance output]")
 	topTenCustomers := make([]*topBalanceCustomer, 0)
 	// Transaction
 	start := time.Now()
-	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
+	if err := crdb.ExecuteTx(context.Background(), db, nil, func(tx *sql.Tx) error {
 		// Get top 10 balance customers
 		rows, err := tx.Query("SELECT c_first, c_middle, c_last, c_balance, c_w_id, c_d_id FROM customer ORDER BY c_balance DESC LIMIT 10")
 		if err != nil {

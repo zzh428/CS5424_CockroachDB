@@ -9,12 +9,12 @@ import (
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
 
-func (d *Driver) RunStockLevelTxn(warehouseID, districtID, threshold, lastOrderNum int) time.Duration {
+func (d *Driver) RunStockLevelTxn(db *sql.DB, warehouseID, districtID, threshold, lastOrderNum int) time.Duration {
 	fmt.Fprintln(d.out, "[Stock-Level output]")
 	total := 0
 	// Transaction
 	start := time.Now()
-	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
+	if err := crdb.ExecuteTx(context.Background(), db, nil, func(tx *sql.Tx) error {
 		// Get next order id
 		var n int
 		if err := tx.QueryRow(

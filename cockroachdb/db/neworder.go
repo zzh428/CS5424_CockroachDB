@@ -29,7 +29,7 @@ type newOrderOutput struct {
 	entryDate             time.Time
 }
 
-func (d *Driver) RunNewOrderTxn(customerID, warehouseID, districtID, itemNum int) time.Duration {
+func (d *Driver) RunNewOrderTxn(db *sql.DB, customerID, warehouseID, districtID, itemNum int) time.Duration {
 	items, err := d.getNewOrderItems(itemNum)
 	if err != nil {
 		fmt.Fprintln(d.errOut, "get new order items failed", err)
@@ -46,7 +46,7 @@ func (d *Driver) RunNewOrderTxn(customerID, warehouseID, districtID, itemNum int
 	var output newOrderOutput
 	// Transaction
 	start := time.Now()
-	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
+	if err := crdb.ExecuteTx(context.Background(), db, nil, func(tx *sql.Tx) error {
 		// Get next order id
 		if err := tx.QueryRow(
 			"SELECT d_next_o_id FROM district WHERE d_w_id = $1 AND d_id = $2",

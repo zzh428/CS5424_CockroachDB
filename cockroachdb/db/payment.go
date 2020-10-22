@@ -17,12 +17,12 @@ type paymentOutput struct {
 	dStreet1, dStreet2, dCity, dState, dZip                          string
 }
 
-func (d *Driver) RunPaymentTxn(warehouseID, districtID, customerID int, payment float64) time.Duration {
+func (d *Driver) RunPaymentTxn(db *sql.DB, warehouseID, districtID, customerID int, payment float64) time.Duration {
 	fmt.Fprintln(d.out, "[Payment out]")
 	var out paymentOutput
 	// Transaction
 	start := time.Now()
-	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
+	if err := crdb.ExecuteTx(context.Background(), db, nil, func(tx *sql.Tx) error {
 		// Update warehouse
 		if _, err := tx.Exec(
 			"UPDATE warehouse SET w_ytd = w_ytd + $1 WHERE w_id = $2",

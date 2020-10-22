@@ -24,13 +24,13 @@ type popularItemDetail struct {
 	orderSet map[int]struct{}
 }
 
-func (d *Driver) RunPopularItemTxn(warehouseID, districtID, lastOrderNum int) time.Duration {
+func (d *Driver) RunPopularItemTxn(db *sql.DB, warehouseID, districtID, lastOrderNum int) time.Duration {
 	fmt.Fprintln(d.out, "[Popular-Item output]")
 	popularItems := make(map[int]*popularItemDetail)
 	allOrder := make(map[int]*popularOrderDetail)
 	// Transaction
 	start := time.Now()
-	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
+	if err := crdb.ExecuteTx(context.Background(), db, nil, func(tx *sql.Tx) error {
 		// Get next order id
 		var n int
 		if err := tx.QueryRow(

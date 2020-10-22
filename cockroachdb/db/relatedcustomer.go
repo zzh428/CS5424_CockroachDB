@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/lib/pq"
 	"time"
+
+	"github.com/lib/pq"
 
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
@@ -14,12 +15,12 @@ type relatedCustomerInfo struct {
 	warehouseID, districtID, customerID int
 }
 
-func (d *Driver) RunRelatedCustomerTxn(warehouseID, districtID, customerID int) time.Duration {
+func (d *Driver) RunRelatedCustomerTxn(db *sql.DB, warehouseID, districtID, customerID int) time.Duration {
 	fmt.Fprintln(d.out, "[Related-Customer output]")
 	relatedCustomers := make(map[relatedCustomerInfo]struct{})
 	// Transaction
 	start := time.Now()
-	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
+	if err := crdb.ExecuteTx(context.Background(), db, nil, func(tx *sql.Tx) error {
 		// Get customer's all order items
 		itemOrderMap := make(map[int][]int)
 		itemSet := make(map[int]struct{})

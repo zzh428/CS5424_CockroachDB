@@ -9,11 +9,11 @@ import (
 	"github.com/cockroachdb/cockroach-go/crdb"
 )
 
-func (d *Driver) RunDeliveryTxn(warehouseID, carrierID int) time.Duration {
+func (d *Driver) RunDeliveryTxn(db *sql.DB, warehouseID, carrierID int) time.Duration {
 	fmt.Fprintln(d.out, "[Delivery output]")
 	// Transaction
 	start := time.Now()
-	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
+	if err := crdb.ExecuteTx(context.Background(), db, nil, func(tx *sql.Tx) error {
 		// District 1 to 10
 		for districtID := 1; districtID <= 10; districtID++ {
 			// Get smallest order number

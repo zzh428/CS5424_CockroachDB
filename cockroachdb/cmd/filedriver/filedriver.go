@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/alecthomas/kingpin"
@@ -16,7 +17,7 @@ import (
 var (
 	userName    = kingpin.Flag("user", "user name").Default("root").String()
 	database    = kingpin.Flag("database", "database name").Default("wholesale").String()
-	endpointStr = kingpin.Flag("endpoint", "endpoint of local node").Required().String()
+	endpointStr = kingpin.Flag("endpoints", "endpoint1,endpoint2,...").Required().String()
 	serverNum   = kingpin.Flag("server-num", "total number of all server node").Default("5").Int()
 	serverSeq   = kingpin.Flag("server-seq", "sequence of local server, start from 1").Required().Int()
 	txnFileNum  = kingpin.Flag("txn-file-num", "20 or 40").Required().Int()
@@ -26,6 +27,8 @@ var (
 
 func main() {
 	kingpin.Parse()
+
+	endpoints := strings.Split(*endpointStr, ",")
 
 	var measurements sync.Map
 
@@ -47,9 +50,9 @@ func main() {
 					log.Fatalf("create output file %v failed: %v", i, err)
 				}
 				defer outFile.Close()
-				driver, err = db.NewDriver(*userName, *endpointStr, *database, f, outFile, outFile)
+				driver, err = db.NewDriver(*userName, *database, endpoints, f, outFile, outFile)
 			} else {
-				driver, err = db.NewDriver(*userName, *endpointStr, *database, f, os.Stdout, os.Stderr)
+				driver, err = db.NewDriver(*userName, *database, endpoints, f, os.Stdout, os.Stderr)
 			}
 			if err != nil {
 				log.Fatalf("new db driver failed: %v", err)

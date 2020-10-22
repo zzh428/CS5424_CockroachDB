@@ -23,13 +23,13 @@ type orderStatusItem struct {
 	date                          sql.NullTime
 }
 
-func (d *Driver) RunOrderStatusTxn(warehouseID, districtID, customerID int) time.Duration {
+func (d *Driver) RunOrderStatusTxn(db *sql.DB, warehouseID, districtID, customerID int) time.Duration {
 	fmt.Fprintln(d.out, "[Order-Status output]")
 	var out orderStatusOutput
 	items := make([]orderStatusItem, 0)
 	// Transaction
 	start := time.Now()
-	if err := crdb.ExecuteTx(context.Background(), d.db, nil, func(tx *sql.Tx) error {
+	if err := crdb.ExecuteTx(context.Background(), db, nil, func(tx *sql.Tx) error {
 		// Get customer info
 		if err := tx.QueryRow(
 			"SELECT c_first, c_middle, c_last, c_balance FROM customer WHERE c_w_id = $1 AND c_d_id = $2 AND c_id = $3",

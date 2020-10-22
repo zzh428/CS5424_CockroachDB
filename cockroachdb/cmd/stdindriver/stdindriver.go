@@ -20,7 +20,7 @@ func main() {
 	kingpin.Parse()
 
 	endpoints := strings.Split(*endpointStr, ",")
-	driver, err := db.NewDriver(*userName, endpoints[0], *database, os.Stdin, os.Stdout, os.Stderr)
+	driver, err := db.NewDriver(*userName, *database, endpoints, os.Stdin, os.Stdout, os.Stderr)
 	if err != nil {
 		log.Fatalf("new db driver failed: %v", err)
 	}
