@@ -24,6 +24,16 @@ type Driver struct {
 	errOut io.Writer
 }
 
+type ClientMeasurement struct {
+	TxnNum         int
+	TotalSeconds   float64
+	Throughput     float64
+	AverageLatency float64
+	MedianLatency  int64
+	Latency95      int64
+	Latency99      int64
+}
+
 func NewDriver(user, endpoint, database string, r io.Reader, w io.Writer, errOut io.Writer) (*Driver, error) {
 	db, err := sql.Open("postgres",
 		fmt.Sprintf(dbSourceName, user, endpoint, database))
@@ -31,14 +41,14 @@ func NewDriver(user, endpoint, database string, r io.Reader, w io.Writer, errOut
 		return nil, err
 	}
 	return &Driver{
-		db:  db,
-		br:  bufio.NewReader(r),
-		out: w,
+		db:     db,
+		br:     bufio.NewReader(r),
+		out:    w,
 		errOut: errOut,
 	}, nil
 }
 
-func (d *Driver) Run() {
+func (d *Driver) Run() ClientMeasurement {
 	txnTime := make([]time.Duration, 0)
 	for {
 		line, _, err := d.br.ReadLine()
@@ -111,13 +121,25 @@ func (d *Driver) Run() {
 	for _, t := range txnTime {
 		totalElapsed += t
 	}
-	fmt.Fprintf(d.out, "Total number of transactions processed: %v\n", len(txnTime))
-	fmt.Fprintf(d.out, "Total elapsed time for processing the transactions: %vs\n", totalElapsed.Seconds())
-	fmt.Fprintf(d.out, "Transaction throughput: %vtxn/s\n", float64(len(txnTime))/totalElapsed.Seconds())
-	fmt.Fprintf(d.out, "Average transaction latency: %vms\n", float64(totalElapsed.Milliseconds())/float64(len(txnTime)))
-	fmt.Fprintf(d.out, "Median transaction latency: %vms\n", txnTime[len(txnTime)/2].Milliseconds())
-	fmt.Fprintf(d.out, "95th percentile transaction latency: %vms\n", txnTime[int(float64(len(txnTime))*0.95)].Milliseconds())
-	fmt.Fprintf(d.out, "99th percentile transaction latency: %vms\n", txnTime[int(float64(len(txnTime))*0.99)].Milliseconds())
+	cm := ClientMeasurement{
+		TxnNum:         len(txnTime),
+		TotalSeconds:   totalElapsed.Seconds(),
+		Throughput:     float64(len(txnTime)) / totalElapsed.Seconds(),
+		AverageLatency: float64(totalElapsed.Milliseconds()) / float64(len(txnTime)),
+		MedianLatency:  txnTime[len(txnTime)/2].Milliseconds(),
+		Latency95:      txnTime[int(float64(len(txnTime))*0.95)].Milliseconds(),
+		Latency99:      txnTime[int(float64(len(txnTime))*0.99)].Milliseconds(),
+	}
+
+	fmt.Fprintf(d.out, "Total number of transactions processed: %v\n", cm.TxnNum)
+	fmt.Fprintf(d.out, "Total elapsed time for processing the transactions: %.2fs\n", cm.TotalSeconds)
+	fmt.Fprintf(d.out, "Transaction throughput: %.2ftxn/s\n", cm.Throughput)
+	fmt.Fprintf(d.out, "Average transaction latency: %.2fms\n", cm.AverageLatency)
+	fmt.Fprintf(d.out, "Median transaction latency: %vms\n", cm.MedianLatency)
+	fmt.Fprintf(d.out, "95th percentile transaction latency: %vms\n", cm.Latency95)
+	fmt.Fprintf(d.out, "99th percentile transaction latency: %vms\n", cm.Latency99)
+
+	return cm
 }
 
 func (d *Driver) Stop() error {
