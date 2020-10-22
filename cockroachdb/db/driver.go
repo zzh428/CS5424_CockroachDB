@@ -34,6 +34,7 @@ func NewDriver(user, endpoint, database string, r io.Reader, w io.Writer, errOut
 		db:  db,
 		br:  bufio.NewReader(r),
 		out: w,
+		errOut: errOut,
 	}, nil
 }
 

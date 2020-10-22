@@ -17,7 +17,7 @@ var (
 	database    = kingpin.Flag("database", "database name").Default("wholesale").String()
 	endpointStr = kingpin.Flag("endpoint", "endpoint of local node").Required().String()
 	serverNum   = kingpin.Flag("server-num", "total number of all server node").Default("5").Int()
-	serverSeq   = kingpin.Flag("sever-seq", "sequence of local server, start from 0").Required().Int()
+	serverSeq   = kingpin.Flag("server-seq", "sequence of local server, start from 1").Required().Int()
 	txnFileNum  = kingpin.Flag("txn-file-num", "20 or 40").Required().Int()
 	fileDir     = kingpin.Flag("dir", "file directory").Required().String()
 	fileOutput  = kingpin.Flag("out-file", "output to file").Default("false").Bool()
