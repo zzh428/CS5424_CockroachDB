@@ -35,7 +35,7 @@ $ go build cmd/filedriver/filedriver.go
 # get command help
 $ ./filedriver --help
 # example
-$ ./filedriver --user=${user_of_db} --database=${db_name} --endpoint=${host:port} --server-num=${server_node_num} --sever-seq=${1~server_node_num} --txn-file-num=${20 or 40} --dir=${path_to_xact-files} --out-file(optional)
+$ ./filedriver --user=${user_of_db} --database=${db_name} --endpoints=${host1:port1},${host2:port2}...${hostn:portn} --server-num=${server_node_num} --sever-seq=${1~server_node_num} --txn-file-num=${20 or 40} --dir=${path_to_xact-files} --out-file(optional)
 ```
 
 When `--user`  not set, user will by default set to `root`
