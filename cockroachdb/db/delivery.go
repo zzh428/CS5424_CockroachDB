@@ -25,10 +25,10 @@ func (d *Driver) RunDeliveryTxn(db *sql.DB, warehouseID, carrierID int) time.Dur
 				return err
 			}
 			if !orderIDNull.Valid {
+				fmt.Fprintln(d.out, "order ID is null: ", warehouseID, districtID)
 				continue
 			}
 			orderID := orderIDNull.Int64
-			fmt.Fprintln(d.out, "delivery debug: ", warehouseID, districtID, orderID)
 			// Update order
 			if _, err := tx.Exec(
 				"UPDATE orders SET o_carrier_id = $1 WHERE o_w_id = $2 AND o_d_id = $3 AND o_id = $4",
@@ -65,6 +65,7 @@ func (d *Driver) RunDeliveryTxn(db *sql.DB, warehouseID, carrierID int) time.Dur
 				return err
 			}
 			if !customerIDNull.Valid {
+				fmt.Fprintln(d.out, "customer ID is null: ", warehouseID, districtID)
 				continue
 			}
 			customerID := customerIDNull.Int64
