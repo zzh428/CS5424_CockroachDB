@@ -30,7 +30,7 @@ func (d *Driver) RunRelatedCustomerTxn(db *sql.DB, warehouseID, districtID, cust
 			warehouseID, districtID, warehouseID, districtID, customerID,
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("get all orderline failed: %w", err)
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -53,7 +53,7 @@ func (d *Driver) RunRelatedCustomerTxn(db *sql.DB, warehouseID, districtID, cust
 			warehouseID, pq.Array(items),
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("get related orderline failed: %w", err)
 		}
 		defer rows.Close()
 		for rows.Next() {
