@@ -25,7 +25,6 @@ func (d *Driver) RunDeliveryTxn(db *sql.DB, warehouseID, carrierID int) time.Dur
 				return err
 			}
 			if !orderIDNull.Valid {
-				fmt.Fprintln(d.out, "order ID is null: ", warehouseID, districtID)
 				continue
 			}
 			orderID := orderIDNull.Int64
@@ -65,7 +64,6 @@ func (d *Driver) RunDeliveryTxn(db *sql.DB, warehouseID, carrierID int) time.Dur
 				return err
 			}
 			if !customerIDNull.Valid {
-				fmt.Fprintln(d.out, "customer ID is null: ", warehouseID, districtID)
 				continue
 			}
 			customerID := customerIDNull.Int64
