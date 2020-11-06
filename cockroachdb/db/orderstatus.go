@@ -39,7 +39,7 @@ func (d *Driver) RunOrderStatusTxn(db *sql.DB, warehouseID, districtID, customer
 		}
 		// Get order info
 		if err := tx.QueryRow(
-			"SELECT o_id, o_entry_d, o_carrier_id FROM orders WHERE o_w_id = $1 AND o_d_id = $2 AND o_c_id = $3",
+			"SELECT o_id, o_entry_d, o_carrier_id FROM orders WHERE o_w_id = $1 AND o_d_id = $2 AND o_c_id = $3 ORDER BY o_id DESC LIMIT 1",
 			warehouseID, districtID, customerID,
 		).Scan(&out.orderID, &out.orderDate, &out.orderCarrierID); err != nil {
 			return err
